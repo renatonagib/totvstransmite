@@ -1,0 +1,125 @@
+version: "3"
+
+networks:
+    net-totvstransmite:
+
+volumes:
+  dbpostgre:   
+  pgadmin:
+
+services:
+
+    postgres:
+        image: "postgres"
+        
+        volumes:
+            - dbpostgre:/var/lib/postgresql/data
+            
+        networks:
+            - net-totvstransmite
+        environment:            
+            - POSTGRES_PASSWORD=123
+
+        ports:
+            - "5432:5432"
+
+        container_name: postgres
+    rabbitmq:
+        image: "rabbitmq:3-management"
+
+        networks:
+            - net-totvstransmite
+        
+        ports:
+            - "15671:15671"
+            - "15672:15672"
+            - "5671:5671"
+            - "5672:5672"
+            - "25672:25672"    
+            
+        healthcheck:
+            test: [ "CMD", "nc", "-z", "localhost", "5672" ]
+            interval: 5s
+            timeout: 15s
+            retries: 1
+        
+        container_name: rabbitmq
+ 
+    worker:
+        build:
+            context: ./Workers
+            dockerfile: Dockerfile
+        networks:
+            - net-totvstransmite
+
+        container_name: worker
+
+        environment:            
+            - DBHOST=postgres
+            - QUEUEHOST=rabbitmq
+            
+        restart: on-failure
+        
+        depends_on:
+            - rabbitmq
+            - postgres                    
+    api:
+        build:
+            context: ./api_edi
+            dockerfile: Dockerfile
+        networks:
+            - net-totvstransmite                    
+        ports:
+            - 8080:80
+        
+        container_name: api
+        
+        depends_on:
+            - rabbitmq            
+
+    pgadmin:
+        image: dpage/pgadmin4
+
+        environment:
+            PGADMIN_DEFAULT_EMAIL: "postgres"
+            PGADMIN_DEFAULT_PASSWORD: "123"            
+        ports:
+        - "16543:80"
+        depends_on:
+            - postgres
+        networks:
+            - net-totvstransmite
+        volumes:
+            - pgadmin:/var/lib/pgadmin
+
+    api_portal:
+        build:
+            context: ./api_portal
+            dockerfile: Dockerfile
+        networks:
+            - net-totvstransmite      
+        environment:            
+            - DBHOST=postgres  
+            - ORIGIN_HOST="http://localhost:4200"                        
+            - DEST_HOST="http://localhost:8081"
+        ports:
+            - 8081:80
+        
+        container_name: api_portal
+        
+        depends_on:
+            - postgres
+    portal:
+        build:
+            context: ./portal
+            dockerfile: Dockerfile
+        networks:
+            - net-totvstransmite      
+        
+        ports:
+            - 4200:80
+        
+        container_name: portal
+        
+        depends_on:
+            - api_portal

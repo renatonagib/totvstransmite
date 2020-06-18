@@ -1,0 +1,17 @@
+<div class="po-wrapper">
+
+  <po-menu [p-menus]="menus"></po-menu>
+
+  <po-page-default p-title="Totvs Transmite">
+    
+    <po-table
+      p-container="shadow"
+      [p-columns]="columns"
+      [p-items]="items"
+      [p-show-more-disabled]="showMoreDisabled"
+      [p-sort]="true"
+      (p-show-more)="showMore($event)">
+    </po-table>
+
+  </po-page-default>
+</div>
